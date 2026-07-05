@@ -1,0 +1,850 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\Order;
+use App\Models\Transaction;
+use App\Models\Setting;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use App\Services\MoolreSmsService;
+
+class AdminDashboardController extends Controller
+{
+    /**
+     * Display the admin dashboard.
+     */
+    public function index()
+    {
+        $today = now()->today();
+        
+        // Use count queries instead of fetching all data
+        $stats = [
+            'totalUsers' => User::count(),
+            'totalProducts' => Product::count(),
+            'totalOrders' => Order::count(),
+            'totalTransactions' => Transaction::count(),
+            'todayUsers' => User::whereDate('created_at', $today)->count(),
+            'todayOrders' => Order::whereDate('created_at', $today)->count(),
+            'todayTransactions' => Transaction::whereDate('created_at', $today)->count(),
+        ];
+
+        return Inertia::render('Admin/Dashboard', [
+            'stats' => $stats,
+            'jaybartOrderPusherEnabled' => (bool) Setting::get('jaybart_order_pusher_enabled', 1),
+        ]);
+    }
+
+    /**
+     * Display the admin users page.
+     */
+    public function users(Request $request)
+    {
+        $users = User::query();
+
+        // Search by email
+        if ($request->has('email') && $request->input('email') !== '') {
+            $users->where('email', 'like', '%' . $request->input('email') . '%');
+        }
+
+        // Filter by role
+        if ($request->has('role') && $request->input('role') !== '') {
+            $users->where('role', $request->input('role'));
+        }
+
+        // Get user statistics
+        $totalUsers = User::count();
+        $customerCount = User::where('role', 'customer')->count();
+        $agentCount = User::where('role', 'agent')->count();
+        $adminCount = User::where('role', 'admin')->count();
+        $dealerCount = User::where('role', 'dealer')->count();
+        $totalWalletBalance = User::sum('wallet_balance');
+
+        return Inertia::render('Admin/Users', [
+            'users' => $users->select('id', 'name', 'email', 'role', 'wallet_balance', 'created_at', 'updated_at')->paginate(15)->appends($request->query()),
+            'filterEmail' => $request->input('email', ''),
+            'filterRole' => $request->input('role', ''),
+            'userStats' => [
+                'total' => $totalUsers,
+                'customers' => $customerCount,
+                'agents' => $agentCount,
+                'admins' => $adminCount,
+                'dealers' => $dealerCount,
+                'totalWalletBalance' => $totalWalletBalance,
+            ],
+        ]);
+    }
+
+    /**
+     * Display the admin products page.
+     */
+    public function products(Request $request)
+    {
+        $products = Product::with('variants');
+
+        if ($request->has('network') && $request->input('network') !== '') {
+            $products->where('network', 'like', '%' . $request->input('network') . '%');
+        }
+
+        $productsData = $products->get()->map(function ($product) {
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'description' => $product->description,
+                'network' => $product->network,
+                'product_type' => $product->product_type,
+                'expiry' => $product->expiry,
+                'has_variants' => $product->has_variants,
+                'variants' => $product->variants,
+                'price_range' => $product->getPriceRange(),
+            ];
+        });
+
+        return Inertia::render('Admin/Products', [
+            'products' => $productsData,
+            'filterNetwork' => $request->input('network', ''),
+        ]);
+    }
+
+    /**
+     * Display the admin orders page.
+     */
+    public function orders(Request $request)
+    {
+        $orders = Order::with(['products' => function($query) {
+            $query->withPivot('quantity', 'price', 'beneficiary_number', 'product_variant_id');
+        }, 'user', 'commissions'])->select('*')->latest();
+
+        if ($request->has('network') && $request->input('network') !== '') {
+            $orders->where('network', 'like', '%' . $request->input('network') . '%');
+        }
+
+        if ($request->has('status') && $request->input('status') !== '') {
+            $orders->where('status', $request->input('status'));
+        }
+
+        if ($request->has('order_id') && $request->input('order_id') !== '') {
+            $orders->where('id', $request->input('order_id'));
+        }
+
+        if ($request->has('beneficiary_number') && $request->input('beneficiary_number') !== '') {
+            $orders->where('beneficiary_number', 'like', '%' . $request->input('beneficiary_number') . '%');
+        }
+
+        if ($request->has('order_pusher_status') && $request->input('order_pusher_status') !== '') {
+            $orders->where('order_pusher_status', $request->input('order_pusher_status'));
+        }
+
+        if ($request->has('order_source') && $request->input('order_source') !== '') {
+            $orders->where('order_source', $request->input('order_source'));
+        }
+
+        if ($request->has('username') && $request->input('username') !== '') {
+            $orders->whereHas('user', function($query) use ($request) {
+                $query->where('name', $request->input('username'));
+            });
+        }
+
+        $paginatedOrders = $orders->paginate(50)->appends($request->query());
+        
+        // Transform orders to include variant information and order source
+        $paginatedOrders->getCollection()->transform(function($order) {
+            $order->products = $order->products->map(function($product) {
+                if ($product->pivot->product_variant_id) {
+                    $variant = \App\Models\ProductVariant::find($product->pivot->product_variant_id);
+                    if ($variant && isset($variant->variant_attributes['size'])) {
+                        $product->size = strtoupper($variant->variant_attributes['size']);
+                    }
+                }
+                return $product;
+            });
+            
+            return $order;
+        });
+
+        $dailyTotalSales = Order::whereDate('created_at', today())->sum('total');
+
+        return Inertia::render('Admin/Orders', [
+            'orders' => $paginatedOrders,
+            'filterNetwork' => $request->input('network', ''),
+            'filterStatus' => $request->input('status', ''),
+            'filterOrderPusherStatus' => $request->input('order_pusher_status', ''),
+            'searchOrderId' => $request->input('order_id', ''),
+            'searchBeneficiaryNumber' => $request->input('beneficiary_number', ''),
+            'filterOrderSource' => $request->input('order_source', ''),
+            'searchUsername' => $request->input('username', ''),
+            'dailyTotalSales' => $dailyTotalSales,
+        ]);
+    }
+
+    /**
+     * Delete an order.
+     */
+    public function deleteOrder(Order $order)
+    {
+        $order->delete();
+        return redirect()->back()->with('success', 'Order deleted successfully.');
+    }
+
+    /**
+     * Update an order's status.
+     */
+    public function updateOrderStatus(Request $request, Order $order)
+    {
+        $request->validate([
+            'status' => 'required|string|in:pending,processing,completed,cancelled',
+        ]);
+
+        $oldStatus = $order->status;
+        $order->update(['status' => $request->status]);
+
+        // Handle automatic refund when order is cancelled
+        if ($request->status === 'cancelled' && $oldStatus !== 'cancelled') {
+            $user = $order->user;
+            $refundAmount = $order->total;
+            
+            $balanceBefore = $user->wallet_balance;
+            // Add refund to user's wallet
+            $user->increment('wallet_balance', $refundAmount);
+            
+            // Create refund transaction record
+            Transaction::create([
+                'user_id' => $user->id,
+                'order_id' => $order->id,
+                'amount' => $refundAmount,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceBefore + $refundAmount,
+                'status' => 'completed',
+                'type' => 'refund',
+                'description' => "Refund for cancelled order #{$order->id}",
+            ]);
+            
+            // Send SMS notification for refund
+            if ($user->phone) {
+                $smsService = new MoolreSmsService();
+                $message = "Your order #{$order->id} has been cancelled and GHS " . number_format($refundAmount, 2) . " has been refunded to your wallet.";
+                $smsService->sendSms($user->phone, $message);
+            }
+        }
+
+        // Send SMS if status changed to completed
+        if ($request->status === 'completed' && $oldStatus !== 'completed' && $order->user->phone) {
+            $smsService = new MoolreSmsService();
+            $firstProduct = $order->products->first();
+            $dataSize = '';
+            if ($firstProduct->pivot->product_variant_id) {
+                $variant = \App\Models\ProductVariant::find($firstProduct->pivot->product_variant_id);
+                if ($variant && isset($variant->variant_attributes['size'])) {
+                    $dataSize = strtoupper($variant->variant_attributes['size']) . ' ';
+                }
+            }
+            $message = "Your order #{$order->id} for {$dataSize}{$firstProduct->name} to {$order->beneficiary_number} ({$order->network}) has been completed. Total: GHS " . number_format($order->total, 2);
+            $smsService->sendSms($order->user->phone, $message);
+        }
+
+        return redirect()->back()->with('success', 'Order status updated successfully.');
+    }
+
+    /**
+     * Bulk update order statuses.
+     */
+    public function bulkUpdateOrderStatus(Request $request)
+    {
+        $request->validate([
+            'order_ids' => 'required|array|min:1',
+            'order_ids.*' => 'exists:orders,id',
+            'status' => 'required|string|in:pending,processing,completed,cancelled',
+        ]);
+
+        // Get orders before update for SMS notifications
+        $orders = Order::with('user')->whereIn('id', $request->order_ids)->get();
+        
+        $updatedCount = Order::whereIn('id', $request->order_ids)
+            ->update(['status' => $request->status]);
+
+        // Handle automatic refunds when orders are cancelled
+        if ($request->status === 'cancelled') {
+            $smsService = new MoolreSmsService();
+            foreach ($orders as $order) {
+                if ($order->status !== 'cancelled') {
+                    $user = $order->user;
+                    $refundAmount = $order->total;
+                    
+                    $balanceBefore = $user->wallet_balance;
+                    // Add refund to user's wallet
+                    $user->increment('wallet_balance', $refundAmount);
+                    
+                    // Create refund transaction record
+                    Transaction::create([
+                        'user_id' => $user->id,
+                        'order_id' => $order->id,
+                        'amount' => $refundAmount,
+                        'balance_before' => $balanceBefore,
+                        'balance_after' => $balanceBefore + $refundAmount,
+                        'status' => 'completed',
+                        'type' => 'refund',
+                        'description' => "Refund for cancelled order #{$order->id}",
+                    ]);
+                    
+                    // Send SMS notification for refund
+                    if ($user->phone) {
+                        $message = "Your order #{$order->id} has been cancelled and GHS " . number_format($refundAmount, 2) . " has been refunded to your wallet.";
+                        $smsService->sendSms($user->phone, $message);
+                    }
+                }
+            }
+        }
+
+        // Send SMS notifications if status changed to completed
+        if ($request->status === 'completed') {
+            $smsService = new MoolreSmsService();
+            foreach ($orders as $order) {
+                if ($order->status !== 'completed' && $order->user->phone) {
+                    $firstProduct = $order->products->first();
+                    $dataSize = '';
+                    if ($firstProduct->pivot->product_variant_id) {
+                        $variant = \App\Models\ProductVariant::find($firstProduct->pivot->product_variant_id);
+                        if ($variant && isset($variant->variant_attributes['size'])) {
+                            $dataSize = strtoupper($variant->variant_attributes['size']) . ' ';
+                        }
+                    }
+                    $message = "Your order #{$order->id} for {$dataSize}{$firstProduct->name} to {$order->beneficiary_number} ({$order->network}) has been completed. Total: GHS " . number_format($order->total, 2);
+                    $smsService->sendSms($order->user->phone, $message);
+                }
+            }
+        }
+
+        return redirect()->back()->with('success', "Updated {$updatedCount} order(s) successfully.");
+    }
+
+    /**
+     * Display the admin transactions page.
+     */
+    public function transactions(Request $request)
+    {
+        $transactions = Transaction::with('user', 'order.user')->latest();
+
+        if ($request->has('type') && $request->input('type') !== '') {
+            $transactions->where('type', $request->input('type'));
+        }
+
+        return Inertia::render('Admin/Transactions', [
+            'transactions' => $transactions->paginate(10)->appends($request->query()),
+            'filterType' => $request->input('type', ''),
+        ]);
+    }
+
+    /**
+     * Store a new user.
+     */
+    public function storeUser(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8',
+            'role' => 'required|string|in:customer,agent,admin,dealer',
+        ]);
+
+        User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => bcrypt($request->password),
+            'role' => $request->role,
+        ]);
+
+        return redirect()->route('admin.users');
+    }
+
+    /**
+     * Update the user's role.
+     */
+    public function updateUserRole(Request $request, User $user)
+    {
+        $request->validate([
+            'role' => 'required|string|in:customer,agent,admin,dealer',
+        ]);
+
+        $user->update([
+            'role' => $request->role,
+        ]);
+
+        return redirect()->route('admin.users');
+    }
+
+    /**
+     * Delete the user.
+     */
+    public function deleteUser(User $user)
+    {
+        $user->delete();
+
+        return redirect()->route('admin.users');
+    }
+
+    /**
+     * Credit user's wallet.
+     */
+    public function creditWallet(Request $request, User $user, MoolreSmsService $smsService)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+        ]);
+
+        $amount = $request->amount;
+        
+        DB::transaction(function () use ($user, $amount) {
+            $balanceBefore = $user->wallet_balance;
+            // Update user wallet balance
+            $user->increment('wallet_balance', $amount);
+            
+            // Create transaction record
+            Transaction::create([
+                'user_id' => $user->id,
+                'amount' => $amount,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceBefore + $amount,
+                'status' => 'completed',
+                'type' => 'admin_credit',
+                'description' => 'Wallet credited by admin',
+                'reference' => 'ADMIN_CREDIT_' . time() . '_' . $user->id,
+            ]);
+        });
+
+        // Send SMS notification
+        $message = "Your wallet has been credited with GHS " . number_format($amount, 2) . ". New balance: GHS " . number_format($user->wallet_balance, 2);
+        $smsService->sendSms($user->phone, $message);
+
+        return redirect()->route('admin.users')->with('success', 'Wallet credited successfully.');
+    }
+
+    /**
+     * Debit user's wallet.
+     */
+    public function debitWallet(Request $request, User $user, MoolreSmsService $smsService)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+        ]);
+
+        if ($user->wallet_balance < $request->amount) {
+            return redirect()->route('admin.users')->with('error', 'Insufficient wallet balance.');
+        }
+
+        $amount = $request->amount;
+        
+        DB::transaction(function () use ($user, $amount) {
+            $balanceBefore = $user->wallet_balance;
+            // Update user wallet balance
+            $user->decrement('wallet_balance', $amount);
+            
+            // Create transaction record
+            Transaction::create([
+                'user_id' => $user->id,
+                'amount' => $amount,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceBefore - $amount,
+                'status' => 'completed',
+                'type' => 'admin_debit',
+                'description' => 'Wallet debited by admin',
+                'reference' => 'ADMIN_DEBIT_' . time() . '_' . $user->id,
+            ]);
+        });
+
+        // Send SMS notification
+        $message = "Your wallet has been debited with GHS " . number_format($amount, 2) . ". New balance: GHS " . number_format($user->wallet_balance, 2);
+        $smsService->sendSms($user->phone, $message);
+
+        return redirect()->route('admin.users')->with('success', 'Wallet debited successfully.');
+    }
+
+    /**
+     * Store a new product.
+     */
+    public function storeProduct(Request $request)
+    {
+        \Log::info('=== STORE PRODUCT REQUEST START ===');
+        \Log::info('Request Method:', [$request->method()]);
+        \Log::info('Request URL:', [$request->url()]);
+        \Log::info('Request Headers:', $request->headers->all());
+        \Log::info('Store Product Request Data:', $request->all());
+        \Log::info('Request Input Count:', [count($request->all())]);
+        \Log::info('complete request',[$request->all()]);
+        
+        try {
+            \Log::info('Starting validation...');
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'network' => 'required|in:MTN,Telecel,Ishare,Bigtime',
+                'description' => 'required|string|max:255',
+                'expiry' => 'required|in:non expiry,30 days,24 hours',
+                'product_type' => 'required|in:agent_product,customer_product,dealer_product',
+                'variants' => 'required|array|min:1',
+                'variants.*.price' => 'required|numeric|min:0',
+                'variants.*.quantity' => 'required|string',
+                'variants.*.status' => 'required|in:IN STOCK,OUT OF STOCK',
+            ]);
+            \Log::info('Validation passed successfully');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validation failed:', $e->errors());
+            throw $e;
+        }
+
+        try {
+            \Log::info('Creating product with data:', [
+                'name' => $request->name,
+                'network' => $request->network,
+                'description' => $request->description,
+                'expiry' => $request->expiry,
+                'product_type' => $request->product_type,
+                'has_variants' => count($request->variants) > 1,
+            ]);
+            
+            $product = Product::create([
+                'name' => $request->name,
+                'network' => $request->network,
+                'description' => $request->description,
+                'expiry' => $request->expiry,
+                'product_type' => $request->product_type,
+                'has_variants' => count($request->variants) > 1,
+            ]);
+
+            \Log::info('Product created with ID: ' . $product->id);
+
+            foreach ($request->variants as $index => $variantData) {
+                \Log::info('Creating variant ' . ($index + 1) . ':', $variantData);
+                
+                ProductVariant::create([
+                    'product_id' => $product->id,
+                    'price' => $variantData['price'],
+                    'quantity' => $variantData['quantity'],
+                    'status' => $variantData['status'],
+                    'variant_attributes' => ['size' => $variantData['quantity']],
+                ]);
+            }
+
+            \Log::info('Product and variants created successfully');
+            return redirect()->route('admin.products')->with('success', 'Product created successfully.');
+        } catch (\Exception $e) {
+            \Log::error('=== PRODUCT CREATION FAILED ===');
+            \Log::error('Error message: ' . $e->getMessage());
+            \Log::error('Error file: ' . $e->getFile() . ':' . $e->getLine());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            \Log::error('Request data at time of error:', $request->all());
+            return redirect()->back()->withErrors(['error' => 'Failed to create product: ' . $e->getMessage()])->withInput();
+        }
+        
+        \Log::info('=== STORE PRODUCT REQUEST END ===');
+    }
+
+    /**
+     * Update a product.
+     */
+    public function updateProduct(Request $request, Product $product)
+    {
+        \Log::info('Update Product Request Data:', $request->all());
+        \Log::info('Updating product ID: ' . $product->id);
+        
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'network' => 'required|in:MTN,Telecel,Ishare,Bigtime',
+            'description' => 'required|string|max:255',
+            'expiry' => 'required|in:non expiry,30 days,24 hours',
+            'product_type' => 'required|in:agent_product,customer_product,dealer_product',
+            'variants' => 'required|array|min:1',
+            'variants.*.price' => 'required|numeric|min:0',
+            'variants.*.quantity' => 'required|string',
+            'variants.*.status' => 'required|in:IN STOCK,OUT OF STOCK',
+        ]);
+
+        try {
+            \DB::transaction(function () use ($request, $product) {
+                $product->update([
+                    'name' => $request->name,
+                    'network' => $request->network,
+                    'description' => $request->description,
+                    'expiry' => $request->expiry,
+                    'product_type' => $request->product_type,
+                    'has_variants' => count($request->variants) > 1,
+                ]);
+
+                $existingVariants = $product->variants;
+                $requestVariants = collect($request->variants);
+
+                // Update existing variants or create new ones
+                $requestVariants->each(function ($variantData, $index) use ($product, $existingVariants) {
+                    if (isset($existingVariants[$index])) {
+                        // Update existing variant
+                        $existingVariants[$index]->update([
+                            'price' => $variantData['price'],
+                            'quantity' => $variantData['quantity'],
+                            'status' => $variantData['status'],
+                            'variant_attributes' => ['size' => $variantData['quantity']],
+                        ]);
+                    } else {
+                        // Create new variant
+                        $product->variants()->create([
+                            'price' => $variantData['price'],
+                            'quantity' => $variantData['quantity'],
+                            'status' => $variantData['status'],
+                            'variant_attributes' => ['size' => $variantData['quantity']],
+                        ]);
+                    }
+                });
+
+                // Delete excess variants if any
+                if ($existingVariants->count() > $requestVariants->count()) {
+                    $variantsToDelete = $existingVariants->slice($requestVariants->count());
+                    foreach ($variantsToDelete as $variant) {
+                        $variant->delete();
+                    }
+                }
+            });
+
+            return redirect()->route('admin.products')->with('success', 'Product updated successfully.');
+        } catch (\Exception $e) {
+            \Log::error('Failed to update product: ' . $e->getMessage());
+            return redirect()->back()->withErrors(['error' => 'Failed to update product: ' . $e->getMessage()])->withInput();
+        }
+    }
+
+    /**
+     * Update stock status for all variants of a product.
+     */
+    public function updateProductStock(Request $request, Product $product)
+    {
+        $request->validate([
+            'status' => 'required|in:IN STOCK,OUT OF STOCK',
+        ]);
+
+        $product->variants()->update(['status' => $request->status]);
+
+        return redirect()->back()->with('success', "All variants set to {$request->status}.");
+    }
+
+    /**
+     * Delete a product.
+     */
+    public function deleteProduct(Product $product)
+    {
+        $product->delete();
+        return redirect()->route('admin.products');
+    }
+
+    /**
+     * Display user transaction history.
+     */
+    public function userTransactions(Request $request, User $user)
+    {
+        $query = Transaction::where('user_id', $user->id)
+            ->with('order')
+            ->latest();
+
+        if ($request->filled('type') && $request->type !== 'all') {
+            $query->where('type', $request->type);
+        }
+
+        $transactions = $query->paginate(20)->appends($request->query());
+
+        // Calculate topup statistics
+        $totalTopupAmount = Transaction::where('user_id', $user->id)
+            ->whereIn('type', ['wallet_topup', 'admin_credit', 'topup', 'credit', 'wallet_credit'])
+            ->sum('amount');
+        
+        $completedTopupAmount = Transaction::where('user_id', $user->id)
+            ->whereIn('type', ['wallet_topup', 'admin_credit', 'topup', 'credit', 'wallet_credit'])
+            ->where('status', 'completed')
+            ->sum('amount');
+        
+        $todaysTopup = Transaction::where('user_id', $user->id)
+            ->whereIn('type', ['wallet_topup', 'admin_credit', 'topup', 'credit', 'wallet_credit'])
+            ->whereDate('created_at', today())
+            ->sum('amount');
+        
+        // Calculate order statistics
+        $totalOrders = Order::where('user_id', $user->id)->count();
+        $totalSales = Order::where('user_id', $user->id)->sum('total');
+        
+        $todaysSales = Order::where('user_id', $user->id)
+            ->whereDate('created_at', today())
+            ->sum('total');
+        
+        return Inertia::render('Admin/UserTransactions', [
+            'user' => $user,
+            'transactions' => $transactions,
+            'filters' => $request->only(['type']),
+            'stats' => [
+                'completedTopupAmount' => $completedTopupAmount,
+                'todaysTopup' => $todaysTopup,
+                'totalOrders' => $totalOrders,
+                'totalSales' => $totalSales,
+                'todaysSales' => $todaysSales,
+            ],
+        ]);
+    }
+
+    /**
+     * Export selected orders to CSV.
+     */
+    public function exportOrders(Request $request)
+    {
+        $request->validate([
+            'order_ids' => 'required|array|min:1',
+            'order_ids.*' => 'exists:orders,id',
+        ]);
+
+        $orders = Order::with(['products' => function($query) {
+            $query->withPivot('quantity', 'beneficiary_number', 'product_variant_id');
+        }])->select('*')->whereIn('id', $request->order_ids)->get();
+
+        $filename = 'orders_' . date('Y-m-d_H-i-s') . '.csv';
+        
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function() use ($orders) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Number', 'Volume']);
+            
+            foreach ($orders as $order) {
+                foreach ($order->products as $product) {
+                    $volume = 0;
+                    
+                    // Get size from product variant if available
+                    if ($product->pivot->product_variant_id) {
+                        $variant = ProductVariant::find($product->pivot->product_variant_id);
+                        if ($variant && isset($variant->variant_attributes['size'])) {
+                            $volume = preg_replace('/gb/i', '', $variant->variant_attributes['size']);
+                        }
+                    }
+                    
+                    // Fallback to quantity if no variant size found
+                    if (!$volume) {
+                        $volume = $product->pivot->quantity ?? 0;
+                    }
+                    
+                    fputcsv($file, [
+                        $product->pivot->beneficiary_number ?? 'N/A',
+                        $volume
+                    ]);
+                }
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Display AFA orders page.
+     */
+    public function afaOrders()
+    {
+        $afaOrders = \App\Models\AFAOrders::with(['afaproduct', 'user'])
+            ->latest()
+            ->get()
+            ->filter(function($order) {
+                // Filter out orders with null relationships to prevent frontend errors
+                return $order->user !== null && $order->afaproduct !== null;
+            })
+            ->values(); // Reset array keys
+        
+        return Inertia::render('Admin/AFAOrders', [
+            'afaOrders' => $afaOrders
+        ]);
+    }
+
+    /**
+     * Update AFA order status.
+     */
+    public function updateAfaOrderStatus(Request $request, \App\Models\AFAOrders $order)
+    {
+        $request->validate([
+            'status' => 'required|string|in:PENDING,COMPLETED,CANCELLED',
+        ]);
+
+        $order->update(['status' => $request->status]);
+
+        return redirect()->back()->with('success', 'AFA order status updated successfully.');
+    }
+
+    /**
+     * Toggle Jaybart order pusher functionality.
+     */
+    public function toggleJaybartOrderPusher(Request $request)
+    {
+        $enabled = $request->input('enabled', false);
+        Setting::set('jaybart_order_pusher_enabled', $enabled ? '1' : '0');
+        
+        $status = $enabled ? 'enabled' : 'disabled';
+        return redirect()->back()->with('success', "Jaybart order pusher {$status} successfully.");
+    }
+
+    /**
+     * Display AFA products page.
+     */
+    public function afaProducts()
+    {
+        $afaProducts = \App\Models\AFAProduct::latest()->get();
+        
+        return Inertia::render('Admin/AFAProducts', [
+            'afaProducts' => $afaProducts
+        ]);
+    }
+
+    /**
+     * Store a new AFA product.
+     */
+    public function storeAfaProduct(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'status' => 'required|in:IN_STOCK,OUT_OF_STOCK',
+        ]);
+
+        \App\Models\AFAProduct::create([
+            'name' => $request->name,
+            'price' => $request->price,
+            'status' => $request->status,
+        ]);
+
+        return redirect()->back()->with('success', 'AFA product created successfully.');
+    }
+
+    /**
+     * Update an AFA product.
+     */
+    public function updateAfaProduct(Request $request, \App\Models\AFAProduct $afaProduct)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'status' => 'required|in:IN_STOCK,OUT_OF_STOCK',
+        ]);
+
+        $afaProduct->update([
+            'name' => $request->name,
+            'price' => $request->price,
+            'status' => $request->status,
+        ]);
+
+        return redirect()->back()->with('success', 'AFA product updated successfully.');
+    }
+
+    /**
+     * Delete an AFA product.
+     */
+    public function deleteAfaProduct(\App\Models\AFAProduct $afaProduct)
+    {
+        $afaProduct->delete();
+        return redirect()->back()->with('success', 'AFA product deleted successfully.');
+    }
+}

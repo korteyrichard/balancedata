@@ -1,0 +1,205 @@
+import { useEffect, FormEventHandler, useState } from 'react';
+import GuestLayout from '../../layouts/GuestLayout';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Head, Link, useForm } from '@inertiajs/react';
+
+export default function Register({ referrer, referralCode }: { referrer?: { id: number; name: string; email: string }; referralCode?: string }) {
+    const [showPassword, setShowPassword] = useState(false);
+    const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
+    const { data, setData, post, processing, errors, reset } = useForm({
+        name: '',
+        email: '',
+        phone: '',
+        business_name: '',
+        password: '',
+        password_confirmation: '',
+        referral_code: referralCode || null,
+    });
+
+    useEffect(() => {
+        return () => {
+            reset('password', 'password_confirmation');
+        };
+    }, []);
+
+    const submit: FormEventHandler = (e) => {
+        e.preventDefault();
+        post(route('register'));
+    };
+
+    return (
+        <GuestLayout>
+            
+            <Head title="Register" />
+            <div className="flex w-full items-center justify-center bg-gradient-to-br from-slate-900 via-green-900 to-slate-900">
+                <div className="w-full max-w-sm">
+                    <div className="bg-white p-6 border border-gray-200">
+                        <div className="text-center mb-6">
+                            <img src='/balancedata.jpg' alt="BalancedData" className="w-16 h-16 mx-auto mb-3 object-contain" />
+                            <h2 className="text-2xl font-bold text-gray-900">Create Account</h2>
+                            {referrer && (
+                                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded">
+                                    <p className="text-sm text-green-800">
+                                        You were referred by: <span className="font-semibold">{referrer.name}</span>
+                                    </p>
+                                    <p className="text-xs text-green-600">{referrer.email}</p>
+                                </div>
+                            )}
+                        </div>
+                        
+                        <form onSubmit={submit} className="space-y-3">
+                            {data.referral_code && (
+                                <input type="hidden" name="referral_code" value={data.referral_code} />
+                            )}
+                            <div>
+                                <Label htmlFor="name" className="text-sm text-gray-700 font-medium">Full Name</Label>
+                                <Input
+                                    id="name"
+                                    name="name"
+                                    value={data.name}
+                                    autoComplete="name"
+                                    onChange={(e) => setData('name', e.target.value)}
+                                    required
+                                    className="mt-1 h-10 border-gray-300 focus:border-green-500 focus:ring-green-500 rounded-none"
+                                />
+                                {errors.name && <div className="text-red-600 text-xs mt-1">{errors.name}</div>}
+                            </div>
+                            
+                            <div>
+                                <Label htmlFor="business_name" className="text-sm text-gray-700 font-medium">Business Name</Label>
+                                <Input
+                                    id="business_name"
+                                    name="business_name"
+                                    value={data.business_name}
+                                    autoComplete="organization"
+                                    onChange={(e) => setData('business_name', e.target.value)}
+                                    className="mt-1 h-10 border-gray-300 focus:border-green-500 focus:ring-green-500 rounded-none"
+                                />
+                                {errors.business_name && <div className="text-red-600 text-xs mt-1">{errors.business_name}</div>}
+                            </div>
+                            
+                            <div>
+                                <Label htmlFor="phone" className="text-sm text-gray-700 font-medium">Phone Number</Label>
+                                <Input
+                                    id="phone"
+                                    name="phone"
+                                    value={data.phone}
+                                    autoComplete="tel"
+                                    onChange={(e) => setData('phone', e.target.value)}
+                                    className="mt-1 h-10 border-gray-300 focus:border-green-500 focus:ring-green-500 rounded-none"
+                                />
+                                {errors.phone && <div className="text-red-600 text-xs mt-1">{errors.phone}</div>}
+                            </div>
+                            
+                            <div>
+                                <Label htmlFor="email" className="text-sm text-gray-700 font-medium">Email Address</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    name="email"
+                                    value={data.email}
+                                    autoComplete="username"
+                                    onChange={(e) => setData('email', e.target.value)}
+                                    required
+                                    className="mt-1 h-10 border-gray-300 focus:border-green-500 focus:ring-green-500 rounded-none"
+                                />
+                                {errors.email && <div className="text-red-600 text-xs mt-1">{errors.email}</div>}
+                            </div>
+                            
+                            <div>
+                                <Label htmlFor="password" className="text-sm text-gray-700 font-medium">Password</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
+                                        name="password"
+                                        value={data.password}
+                                        autoComplete="new-password"
+                                        onChange={(e) => setData('password', e.target.value)}
+                                        required
+                                        className="mt-1 h-10 border-gray-300 focus:border-green-500 focus:ring-green-500 rounded-none pr-10"
+                                    />
+                                    <button
+                                        type="button"
+                                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                    >
+                                        {showPassword ? (
+                                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                                            </svg>
+                                        ) : (
+                                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                        )}
+                                    </button>
+                                </div>
+                                {errors.password && <div className="text-red-600 text-xs mt-1">{errors.password}</div>}
+                            </div>
+                            
+                            <div>
+                                <Label htmlFor="password_confirmation" className="text-sm text-gray-700 font-medium">Confirm Password</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="password_confirmation"
+                                        type={showPasswordConfirmation ? "text" : "password"}
+                                        name="password_confirmation"
+                                        value={data.password_confirmation}
+                                        autoComplete="new-password"
+                                        onChange={(e) => setData('password_confirmation', e.target.value)}
+                                        required
+                                        className="mt-1 h-10 border-gray-300 focus:border-green-500 focus:ring-green-500 rounded-none pr-10"
+                                    />
+                                    <button
+                                        type="button"
+                                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                                        onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)}
+                                    >
+                                        {showPasswordConfirmation ? (
+                                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                                            </svg>
+                                        ) : (
+                                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                        )}
+                                    </button>
+                                </div>
+                                {errors.password_confirmation && <div className="text-red-600 text-xs mt-1">{errors.password_confirmation}</div>}
+                            </div>
+                            
+                            <Button 
+                                className="w-full h-10 text-white font-medium text-sm mt-4 rounded-none" 
+                                disabled={processing}
+                                style={{
+                                  backgroundColor: '#00AA00',
+                                  color: 'white'
+                                }}
+                            >
+                                {processing ? 'Creating account...' : 'Create Account'}
+                            </Button>
+                        </form>
+                        
+                        <div className="mt-6 text-center">
+                            <p className="text-sm text-gray-600">
+                                Already have an account?{' '}
+                                <Link
+                                    href={route('login')}
+                                    className="text-green-600 hover:text-green-500 font-medium"
+                                >
+                                    Sign in
+                                </Link>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </GuestLayout>
+    );
+}

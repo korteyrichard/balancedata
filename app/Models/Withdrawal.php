@@ -1,0 +1,35 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Withdrawal extends Model
+{
+    protected $fillable = [
+        'agent_id',
+        'amount',
+        'phone_number',
+        'network',
+        'mobile_money_name',
+        'withdrawal_fee',
+        'net_amount',
+        'status',
+        'notes',
+        'processed_at',
+        'withdrawal_type'
+    ];
+
+    protected $casts = [
+        'amount' => 'decimal:2',
+        'withdrawal_fee' => 'decimal:2',
+        'net_amount' => 'decimal:2',
+        'processed_at' => 'datetime'
+    ];
+
+    public function agent(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'agent_id');
+    }
+}

@@ -1,0 +1,351 @@
+import React from "react";
+import { AdminLayout } from "../../layouts/admin-layout";
+import { Button } from "@/components/ui/button";
+import { PageProps, User, Transaction } from '@/types';
+import { ArrowLeft, Calendar, DollarSign, FileText, ShoppingCart } from "lucide-react";
+import { Link, router } from '@inertiajs/react';
+
+interface PaginatedData<T> {
+  data: T[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+  links: { url: string | null; label: string; active: boolean }[];
+}
+
+interface UserTransactionsPageProps extends PageProps {
+  user: User;
+  transactions: PaginatedData<Transaction>;
+  filters?: { type?: string };
+  stats?: {
+    completedTopupAmount: number;
+    todaysTopup: number;
+    totalOrders: number;
+    totalSales: number;
+    todaysSales: number;
+  };
+}
+
+const UserTransactionsPage = ({ auth, user, transactions, filters, stats }: UserTransactionsPageProps) => {
+  const currentType = filters?.type || 'all';
+
+  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const type = e.target.value;
+    router.get(
+      route('admin.users.transactions', user.id),
+      type === 'all' ? {} : { type },
+      { preserveState: true, preserveScroll: true }
+    );
+  };
+  const defaultStats = {
+    completedTopupAmount: 0,
+    todaysTopup: 0,
+    totalOrders: 0,
+    totalSales: 0,
+    todaysSales: 0,
+  };
+  
+  const currentStats = stats ? {
+    completedTopupAmount: Number(stats.completedTopupAmount) || 0,
+    todaysTopup: Number(stats.todaysTopup) || 0,
+    totalOrders: Number(stats.totalOrders) || 0,
+    totalSales: Number(stats.totalSales) || 0,
+    todaysSales: Number(stats.todaysSales) || 0,
+  } : defaultStats;
+
+  const transactionData = transactions.data;
+  const getStatusBadge = (status: string) => {
+    const statusClasses = {
+      completed: "bg-green-100 text-green-800",
+      pending: "bg-yellow-100 text-yellow-800",
+      failed: "bg-red-100 text-red-800",
+      cancelled: "bg-gray-100 text-gray-800",
+    };
+    
+  
+    return (
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusClasses[status as keyof typeof statusClasses] || 'bg-gray-100 text-gray-800'}`}>
+        {status}
+      </span>
+    );
+  };
+
+  const getTypeBadge = (type: string, transaction?: Transaction) => {
+    const typeClasses: Record<string, string> = {
+      order: "bg-purple-100 text-purple-800",
+      bulk_order: "bg-purple-100 text-purple-800",
+      guest_order: "bg-purple-100 text-purple-800",
+      topup: "bg-blue-100 text-blue-800",
+      credit: "bg-blue-100 text-blue-800",
+      wallet_credit: "bg-blue-100 text-blue-800",
+      admin_credit: "bg-cyan-100 text-cyan-800",
+      debit: "bg-red-100 text-red-800",
+      wallet_debit: "bg-red-100 text-red-800",
+      admin_debit: "bg-red-100 text-red-800",
+      agent_fee: "bg-orange-100 text-orange-800",
+      dealer_fee: "bg-orange-100 text-orange-800",
+    };
+
+    const label = ['order', 'bulk_order', 'guest_order'].includes(type) && transaction?.order?.network
+      ? `${type.replace('_', ' ')} (${transaction.order.network})`
+      : type.replace('_', ' ');
+    
+    return (
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${typeClasses[type] || 'bg-gray-100 text-gray-800'}`}>
+        {label}
+      </span>
+    );
+  };
+
+  return (
+    <AdminLayout
+      user={auth.user}
+      header={
+        <div className="flex items-center gap-4">
+          <Link href={route('admin.users')}>
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Users
+            </Button>
+          </Link>
+          <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200 leading-tight">
+            Transaction History - {user.name}
+          </h2>
+        </div>
+      }
+    >
+      {/* User Info Card */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div>
+            <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400">User Name</h3>
+            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">{user.name}</p>
+          </div>
+          <div>
+            <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400">Email</h3>
+            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">{user.email}</p>
+          </div>
+          <div>
+            <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400">Phone</h3>
+            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">{user.phone}</p>
+          </div>
+          <div>
+            <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400">Role</h3>
+            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 capitalize">{user.role}</p>
+          </div>
+          <div>
+            <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400">Wallet Balance</h3>
+            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">₵{user.wallet_balance || '0.00'}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Transaction Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Completed Topup</h3>
+            <div className="p-2 bg-green-50 rounded-lg">
+              <Calendar className="w-4 h-4 text-green-600" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-gray-900">
+            ₵{currentStats.completedTopupAmount.toFixed(2)}
+          </p>
+        </div>
+        
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Today's Topup</h3>
+            <div className="p-2 bg-cyan-50 rounded-lg">
+              <DollarSign className="w-4 h-4 text-cyan-600" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-gray-900">
+            ₵{currentStats.todaysTopup.toFixed(2)}
+          </p>
+        </div>
+        
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Total Orders</h3>
+            <div className="p-2 bg-purple-50 rounded-lg">
+              <ShoppingCart className="w-4 h-4 text-purple-600" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-gray-900">
+            {currentStats.totalOrders}
+          </p>
+        </div>
+        
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Total Sales</h3>
+            <div className="p-2 bg-orange-50 rounded-lg">
+              <DollarSign className="w-4 h-4 text-orange-600" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-gray-900">
+            ₵{currentStats.totalSales.toFixed(2)}
+          </p>
+        </div>
+        
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Today's Sales</h3>
+            <div className="p-2 bg-emerald-50 rounded-lg">
+              <DollarSign className="w-4 h-4 text-emerald-600" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-gray-900">
+            ₵{currentStats.todaysSales.toFixed(2)}
+          </p>
+        </div>
+        
+
+      </div>
+
+      {/* Transactions Table */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h3 className="text-lg font-medium text-gray-900">Transaction History</h3>
+          <select
+            value={currentType}
+            onChange={handleFilterChange}
+            className="text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">All Types</option>
+            <option value="order">Order</option>
+            <option value="topup">Topup</option>
+            <option value="credit">Credit</option>
+            <option value="debit">Debit</option>
+            <option value="admin_credit">Admin Credit</option>
+            <option value="admin_debit">Admin Debit</option>
+            <option value="wallet_debit">Wallet Debit</option>
+            <option value="agent_fee">Agent Fee</option>
+            <option value="dealer_fee">Dealer Fee</option>
+            <option value="guest_order">Guest Order</option>
+          </select>
+        </div>
+        
+        {transactionData.length > 0 ? (
+          <>
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bal Before</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bal After</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {transactionData.map((transaction) => (
+                    <tr key={transaction.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(transaction.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(transaction.created_at).toLocaleTimeString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {getTypeBadge(transaction.type, transaction)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {transaction.balance_before != null ? `₵${parseFloat(transaction.balance_before).toFixed(2)}` : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        ₵{parseFloat(transaction.amount).toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {transaction.balance_after != null ? `₵${parseFloat(transaction.balance_after).toFixed(2)}` : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {getStatusBadge(transaction.status)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden divide-y divide-gray-200">
+              {transactionData.map((transaction) => (
+                <div key={transaction.id} className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2 mb-1">
+                        {getTypeBadge(transaction.type, transaction)}
+                        {getStatusBadge(transaction.status)}
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {new Date(transaction.created_at).toLocaleDateString()} at {new Date(transaction.created_at).toLocaleTimeString()}
+                      </p>
+                    </div>
+                    <p className="text-lg font-semibold text-gray-900">
+                      ₵{parseFloat(transaction.amount).toFixed(2)}
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-900">{transaction.type.replace('_', ' ')}</p>
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>{transaction.balance_before != null ? `Bal Before: ₵${parseFloat(transaction.balance_before).toFixed(2)}` : ''}</span>
+                    <span>{transaction.balance_after != null ? `Bal After: ₵${parseFloat(transaction.balance_after).toFixed(2)}` : ''}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="px-6 py-8 text-center text-gray-500">
+            <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <p className="text-lg font-medium">No transactions found</p>
+            <p className="text-sm">This user hasn't made any transactions yet.</p>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {transactions.last_page > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              Showing page {transactions.current_page} of {transactions.last_page} ({transactions.total} total)
+            </p>
+            <div className="flex gap-1">
+              {transactions.links.map((link, index) => (
+                <button
+                  key={index}
+                  disabled={!link.url}
+                  onClick={() => {
+                    if (link.url) {
+                      const url = new URL(link.url);
+                      if (currentType !== 'all') {
+                        url.searchParams.set('type', currentType);
+                      }
+                      router.visit(url.toString());
+                    }
+                  }}
+                  className={`px-3 py-1 text-sm rounded ${
+                    link.active
+                      ? 'bg-blue-600 text-white'
+                      : link.url
+                        ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        : 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                  }`}
+                  dangerouslySetInnerHTML={{ __html: link.label }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </AdminLayout>
+  );
+};
+
+export default UserTransactionsPage;

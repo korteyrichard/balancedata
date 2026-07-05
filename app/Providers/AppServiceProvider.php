@@ -1,0 +1,45 @@
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\View;
+use Inertia\Inertia;
+use App\Models\Alert;
+use App\Models\Order;
+use App\Models\Setting;
+use App\Observers\OrderObserver;
+
+class AppServiceProvider extends ServiceProvider
+{
+    /**
+     * Register any application services.
+     */
+    public function register(): void
+    {
+        //
+    }
+
+    /**
+     * Bootstrap any application services.
+     */
+    public function boot(): void
+    {
+        View::composer(['Dashboard/*', 'test-alert'], function ($view) {
+            $activeAlert = Alert::where('is_active', true)->latest()->first();
+            $view->with('activeAlert', $activeAlert);
+        });
+
+        // Share social links with all Inertia responses
+        Inertia::share([
+            'socialLinks' => [
+                'whatsapp_community' => Setting::get('whatsapp_community_link', ''),
+                'whatsapp_contact' => Setting::get('whatsapp_contact_link', ''),
+                'telegram_channel' => Setting::get('telegram_channel_link', ''),
+            ]
+        ]);
+
+        // Register observers
+        Order::observe(OrderObserver::class);
+    }
+}
