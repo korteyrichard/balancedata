@@ -9,8 +9,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Support\Facades\DB;
-use App\Services\OrderPusherService;
-use App\Services\OrderStatusSyncService;
+use App\Services\UnifiedOrderPusherService;
 use Illuminate\Support\Facades\Log;
 use App\Models\Setting;
 
@@ -139,8 +138,13 @@ class OrderController extends Controller
         
         // Push order to external API
         try {
-            $orderPusher = new OrderPusherService();
-            $orderPusher->pushOrderToApi($order);
+            if (Setting::get('order_pusher_enabled', false)) {
+                $orderPusher = new UnifiedOrderPusherService();
+                $orderPusher->pushOrderToApi($order);
+            } else {
+                $order->update(['order_pusher_status' => 'disabled']);
+                Log::info('Order pusher is disabled', ['orderId' => $order->id]);
+            }
         } catch (\Exception $e) {
             Log::error('Failed to push order to external API', ['orderId' => $order->id, 'network' => $order->network, 'error' => $e->getMessage()]);
         }

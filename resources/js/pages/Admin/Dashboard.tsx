@@ -13,7 +13,7 @@ interface AdminDashboardProps extends PageProps {
     todayOrders: number;
     todayTransactions: number;
   };
-  jaybartOrderPusherEnabled: boolean;
+  orderPusherEnabled: boolean;
 }
 
 interface StatCardProps {
@@ -58,13 +58,13 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, trend })
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
   stats,
-  jaybartOrderPusherEnabled,
+  orderPusherEnabled,
 }) => {
   const { auth } = usePage<AdminDashboardProps>().props;
 
-  const toggleJaybartOrderPusher = () => {
-    router.post('/admin/toggle-jaybart-order-pusher', {
-      enabled: !jaybartOrderPusherEnabled
+  const toggleOrderPusher = () => {
+    router.post(route('admin.toggle.order.pusher'), {
+      enabled: !orderPusherEnabled
     });
   };
 
@@ -195,7 +195,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div>
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Order Pusher Service</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    {jaybartOrderPusherEnabled ? (
+                    {orderPusherEnabled ? (
                       <span className="flex items-center mt-1">
                         <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>
                         Order pusher service is active
@@ -209,16 +209,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </p>
                 </div>
                 <button
-                  onClick={toggleJaybartOrderPusher}
+                  onClick={toggleOrderPusher}
                   className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                    jaybartOrderPusherEnabled 
+                    orderPusherEnabled 
                       ? 'bg-green-600 focus:ring-green-500' 
                       : 'bg-gray-300 dark:bg-gray-600 focus:ring-gray-500'
                   }`}
                 >
                   <span
                     className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform ${
-                      jaybartOrderPusherEnabled ? 'translate-x-7' : 'translate-x-1'
+                      orderPusherEnabled ? 'translate-x-7' : 'translate-x-1'
                     }`}
                   />
                 </button>

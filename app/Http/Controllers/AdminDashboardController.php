@@ -36,7 +36,7 @@ class AdminDashboardController extends Controller
 
         return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,
-            'jaybartOrderPusherEnabled' => (bool) Setting::get('jaybart_order_pusher_enabled', 1),
+            'orderPusherEnabled' => (bool) Setting::get('order_pusher_enabled', false),
         ]);
     }
 
@@ -785,6 +785,18 @@ class AdminDashboardController extends Controller
         
         $status = $enabled ? 'enabled' : 'disabled';
         return redirect()->back()->with('success', "Jaybart order pusher {$status} successfully.");
+    }
+
+    /**
+     * Toggle unified order pusher functionality.
+     */
+    public function toggleOrderPusher(Request $request)
+    {
+        $enabled = $request->input('enabled', false);
+        Setting::set('order_pusher_enabled', $enabled ? true : false);
+        
+        $status = $enabled ? 'enabled' : 'disabled';
+        return redirect()->back()->with('success', "Order pusher {$status} successfully.");
     }
 
     /**

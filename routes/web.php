@@ -121,6 +121,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     Route::put('afa-products/{afaProduct}', [\App\Http\Controllers\AdminDashboardController::class, 'updateAfaProduct'])->name('afa-products.update');
     Route::delete('afa-products/{afaProduct}', [\App\Http\Controllers\AdminDashboardController::class, 'deleteAfaProduct'])->name('afa-products.delete');
     Route::post('toggle-jaybart-order-pusher', [\App\Http\Controllers\AdminDashboardController::class, 'toggleJaybartOrderPusher'])->name('toggle.jaybart.order.pusher');
+    Route::post('toggle-order-pusher', [\App\Http\Controllers\AdminDashboardController::class, 'toggleOrderPusher'])->name('toggle.order.pusher');
     Route::post('toggle-codecraft-order-pusher', [\App\Http\Controllers\AdminDashboardController::class, 'toggleCodecraftOrderPusher'])->name('toggle.codecraft.order.pusher');
     Route::post('toggle-jesco-order-pusher', [\App\Http\Controllers\AdminDashboardController::class, 'toggleJescoOrderPusher'])->name('toggle.jesco.order.pusher');
     Route::post('toggle-easydata-order-pusher', [\App\Http\Controllers\AdminDashboardController::class, 'toggleEasydataOrderPusher'])->name('toggle.easydata.order.pusher');

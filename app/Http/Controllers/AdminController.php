@@ -340,6 +340,7 @@ class AdminController extends Controller
             'whatsapp_community_link' => Setting::get('whatsapp_community_link', ''),
             'whatsapp_contact_link' => Setting::get('whatsapp_contact_link', ''),
             'telegram_channel_link' => Setting::get('telegram_channel_link', ''),
+            'order_pusher_enabled' => Setting::get('order_pusher_enabled', false),
         ];
 
         return inertia('Admin/Settings', [
@@ -374,6 +375,7 @@ class AdminController extends Controller
         Setting::set('whatsapp_community_link', $request->whatsapp_community_link);
         Setting::set('whatsapp_contact_link', $request->whatsapp_contact_link);
         Setting::set('telegram_channel_link', $request->telegram_channel_link);
+        Setting::set('order_pusher_enabled', $request->has('order_pusher_enabled') && $request->order_pusher_enabled);
 
         return redirect()->back()->with('success', 'Store management settings updated successfully');
     }

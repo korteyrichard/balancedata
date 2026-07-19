@@ -48,6 +48,7 @@ export default function DashboardLayout({ user, header, children }: DashboardLay
         { name: 'Afa', href: route('dashboard.afa'), icon: 'Receipt', current: route().current('dashboard.afa') },
         { name: 'Transactions', href: route('dashboard.transactions'), icon: 'Receipt', current: route().current('dashboard.transactions') },
         ...(user.role === 'agent' || user.role === 'admin' || user.role === 'dealer' ? [{ name: 'API Docs', href: route('dashboard.api-docs'), icon: 'Code' as IconName, current: route().current('dashboard.api-docs') }] : []),
+        { name: 'Terms & Conditions', href: route('dashboard.terms'), icon: 'FileText' as IconName, current: route().current('dashboard.terms') },
         { name: 'Settings', href: route('profile.edit'), icon: 'Settings', current: route().current('profile.edit') || route().current('password.edit') || route().current('appearance') },
     ];
 

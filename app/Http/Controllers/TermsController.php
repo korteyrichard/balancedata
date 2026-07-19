@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use function Termwind\render;
+use Inertia\Inertia;
 
 class TermsController extends Controller
 {
     public function index() 
     {
-        return Inertia('Dashboard/Terms');
+        return Inertia::render('Dashboard/Terms', [
+            'auth' => [
+                'user' => auth()->user(),
+            ],
+        ]);
     }
 }

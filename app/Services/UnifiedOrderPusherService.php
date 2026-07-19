@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -20,6 +21,12 @@ class UnifiedOrderPusherService
 
     public function pushOrderToApi(Order $order): void
     {
+        if (!Setting::get('order_pusher_enabled', false)) {
+            Log::info('Order pusher is disabled, skipping order push', ['order_id' => $order->id]);
+            $order->update(['order_pusher_status' => 'disabled']);
+            return;
+        }
+
         Log::info('Processing order for Unified API push', ['order_id' => $order->id]);
         
         $items = $order->products()->withPivot('quantity', 'price', 'beneficiary_number', 'product_variant_id')->get();
