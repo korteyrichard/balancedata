@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, router } from "@inertiajs/react";
+import React, { useState, useEffect } from "react";
+import { Link, router, usePage } from "@inertiajs/react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { PanelLeft, LogOut, Settings, Cog, ChevronDown } from "lucide-react";
@@ -46,6 +46,14 @@ const adminNavigation: NavigationItem[] = [
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, user, header }) => {
   const currentRoute = route().current();
+  const { auth } = usePage().props;
+  
+  // Check for session expiration
+  useEffect(() => {
+    if (!auth?.user) {
+      router.visit(route('login'));
+    }
+  }, [auth?.user]);
   
   const navigationItems = adminNavigation.map(item => ({
     ...item,

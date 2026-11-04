@@ -51,6 +51,16 @@ class ProductSeeder extends Seeder
             'has_variants' => true
         ]);
 
+        // MTN Express Data Bundles
+        Product::create([
+            'name' => 'MTN Express',
+            'description' => 'MTN Express mobile data packages',
+            'network' => 'MTN EXPRESS',
+            'product_type' => 'customer_product',
+            'expiry' => '30 days',
+            'has_variants' => true
+        ]);
+
 
         // MTN Data Bundles
         Product::create([
@@ -86,6 +96,16 @@ class ProductSeeder extends Seeder
             'name' => 'Bigtime',
             'description' => 'AT Bigtime mobile data packages',
             'network' => 'BIGTIME',
+            'product_type' => 'agent_product',
+            'expiry' => '30 days',
+            'has_variants' => true
+        ]);
+
+        // MTN Express Data Bundles
+        Product::create([
+            'name' => 'MTN Express',
+            'description' => 'MTN Express mobile data packages',
+            'network' => 'MTN EXPRESS',
             'product_type' => 'agent_product',
             'expiry' => '30 days',
             'has_variants' => true

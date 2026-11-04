@@ -14,6 +14,7 @@ interface AdminDashboardProps extends PageProps {
     todayTransactions: number;
   };
   orderPusherEnabled: boolean;
+  billbenOrderPusherEnabled: boolean;
 }
 
 interface StatCardProps {
@@ -59,6 +60,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, trend })
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
   stats,
   orderPusherEnabled,
+  billbenOrderPusherEnabled,
 }) => {
   const { auth } = usePage<AdminDashboardProps>().props;
 
@@ -66,6 +68,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     router.post(route('admin.toggle.order.pusher'), {
       enabled: !orderPusherEnabled
     });
+  };
+
+  const toggleBillbenOrderPusher = () => {
+    router.post(route('admin.toggle.billben.order.pusher'), {
+      enabled: !billbenOrderPusherEnabled
+    });
+  };
+
+  const syncBillbenOrderStatus = () => {
+    if (confirm('Are you sure you want to sync Billben order statuses? This will fetch the latest status from Billben API for all pending orders.')) {
+      router.post(route('admin.sync.billben.order.status'), {});
+    }
   };
 
   return (
@@ -189,21 +203,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
           <div className="space-y-4">
-            {/* Order Pusher Service */}
+            {/* Unified Order Pusher Service */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Order Pusher Service</h4>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Unified Order Pusher</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     {orderPusherEnabled ? (
                       <span className="flex items-center mt-1">
                         <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                        Order pusher service is active
+                        Push orders to Unified API (DataMarket)
                       </span>
                     ) : (
                       <span className="flex items-center mt-1">
                         <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mr-2"></span>
-                        Order pusher service is disabled
+                        Unified order pusher is disabled
                       </span>
                     )}
                   </p>
@@ -221,6 +235,60 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       orderPusherEnabled ? 'translate-x-7' : 'translate-x-1'
                     }`}
                   />
+                </button>
+              </div>
+            </div>
+
+            {/* Billben Order Pusher Service */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all p-6 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Billben Order Pusher</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {billbenOrderPusherEnabled ? (
+                      <span className="flex items-center mt-1">
+                        <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                        Push orders to Billben PrimeHub API
+                      </span>
+                    ) : (
+                      <span className="flex items-center mt-1">
+                        <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mr-2"></span>
+                        Billben order pusher is disabled
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <button
+                  onClick={toggleBillbenOrderPusher}
+                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    billbenOrderPusherEnabled 
+                      ? 'bg-green-600 focus:ring-green-500' 
+                      : 'bg-gray-300 dark:bg-gray-600 focus:ring-gray-500'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform ${
+                      billbenOrderPusherEnabled ? 'translate-x-7' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* Billben Order Status Sync */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all p-6 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Billben Order Status Sync</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Manually sync order statuses from Billben API. This fetches the latest status for all pending orders.
+                  </p>
+                </div>
+                <button
+                  onClick={syncBillbenOrderStatus}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+                >
+                  Sync Now
                 </button>
               </div>
             </div>

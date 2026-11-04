@@ -122,7 +122,9 @@ export default function Shop({ auth, shop, products, availableProducts, domains 
         });
     };
 
-    const selectedProductData = availableProducts?.find(p => p.id.toString() === selectedProduct);
+    // Safely handle availableProducts - ensure it's always an array
+    const safeAvailableProducts = Array.isArray(availableProducts) ? availableProducts : [];
+    const selectedProductData = safeAvailableProducts.find(p => p.id.toString() === selectedProduct);
     const selectedVariantData = selectedProductData?.variants.find(v => v.id.toString() === selectedVariant);
     const basePrice = parseFloat(selectedVariantData?.price || 0);
 
@@ -366,8 +368,8 @@ export default function Shop({ auth, shop, products, availableProducts, domains 
                                     <div>
                                         <label className="block text-sm font-medium mb-2">Select Product Variant</label>
                                         <div className="max-h-64 overflow-y-auto border rounded p-2 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
-                                            {availableProducts?.length > 0 ? (
-                                                availableProducts.map(product => 
+                                            {safeAvailableProducts.length > 0 ? (
+                                                safeAvailableProducts.map(product => 
                                                     product.variants.map(variant => (
                                                         <div key={`${product.id}-${variant.id}`} className="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                                                             <div className="flex items-center space-x-3">

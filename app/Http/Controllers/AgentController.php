@@ -386,6 +386,31 @@ class AgentController extends Controller
                         })
                     ];
                 });
+        } elseif ($user->role === 'dealer') {
+            // Dealers see only products with product_type = 'dealer_product' and variants that are in stock
+            $availableProducts = \App\Models\Product::with(['variants' => function($query) {
+                    $query->where('status', 'IN STOCK');
+                }])
+                ->where('product_type', 'dealer_product')
+                ->get()
+                ->filter(function($product) {
+                    return $product->variants->count() > 0;
+                })
+                ->map(function($product) {
+                    return [
+                        'id' => $product->id,
+                        'name' => $product->name,
+                        'product_type' => $product->product_type,
+                        'network' => $product->network,
+                        'variants' => $product->variants->map(function($variant) {
+                            return [
+                                'id' => $variant->id,
+                                'name' => $variant->getVariantNameAttribute(),
+                                'price' => $variant->price
+                            ];
+                        })
+                    ];
+                });
         } elseif ($user->role === 'admin') {
             // Admin sees all products with all variants (including out of stock)
             $availableProducts = \App\Models\Product::with('variants')->get()->map(function($product) {

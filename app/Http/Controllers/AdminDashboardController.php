@@ -37,6 +37,7 @@ class AdminDashboardController extends Controller
         return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,
             'orderPusherEnabled' => (bool) Setting::get('order_pusher_enabled', false),
+            'billbenOrderPusherEnabled' => (bool) Setting::get('billben_order_pusher_enabled', false),
         ]);
     }
 
@@ -797,6 +798,37 @@ class AdminDashboardController extends Controller
         
         $status = $enabled ? 'enabled' : 'disabled';
         return redirect()->back()->with('success', "Order pusher {$status} successfully.");
+    }
+
+    /**
+     * Toggle Billben order pusher functionality.
+     */
+    public function toggleBillbenOrderPusher(Request $request)
+    {
+        $enabled = $request->input('enabled', false);
+        Setting::set('billben_order_pusher_enabled', $enabled ? true : false);
+        
+        $status = $enabled ? 'enabled' : 'disabled';
+        return redirect()->back()->with('success', "Billben order pusher {$status} successfully.");
+    }
+
+    /**
+     * Manually sync Billben order statuses.
+     */
+    public function syncBillbenOrderStatus(Request $request)
+    {
+        try {
+            $syncService = new \App\Services\BillbenOrderStatusSyncService();
+            $syncService->syncAllPendingOrders();
+            
+            return redirect()->back()->with('success', 'Billben order status sync completed successfully.');
+        } catch (\Exception $e) {
+            \Log::error('Failed to sync Billben order statuses', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()->with('error', 'Failed to sync Billben order statuses: ' . $e->getMessage());
+        }
     }
 
     /**

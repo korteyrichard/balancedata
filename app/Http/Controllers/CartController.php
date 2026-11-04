@@ -9,6 +9,7 @@ use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\Response;
 
 class CartController extends Controller
 {
@@ -27,13 +28,21 @@ class CartController extends Controller
             // Determine product type based on user role
             $productType = $user->isCustomer() ? 'customer_product' : 'agent_product';
             
-            // Find the product by network and product type
-            $product = Product::where('network', $request->network)
-                ->where('product_type', $productType)
-                ->first();
+            // Handle MTN EXPRESS as special case - search by name
+            $networkValue = $request->network;
+            if (strtoupper($networkValue) === 'MTN EXPRESS') {
+                $product = Product::where('name', 'MTN Express')
+                    ->where('product_type', $productType)
+                    ->first();
+            } else {
+                // For other networks, search by network field
+                $product = Product::where('network', $networkValue)
+                    ->where('product_type', $productType)
+                    ->first();
+            }
             
             if (!$product) {
-                return response()->json(['success' => false, 'message' => 'Product not found'], 400);
+                return redirect()->back()->withErrors(['error' => 'Product not found']);
             }
             
             // Find the variant by size - try multiple formats
@@ -51,9 +60,6 @@ class CartController extends Controller
                 ->first();
                 
             if (!$variant) {
-                if ($request->expectsJson()) {
-                    return response()->json(['success' => false, 'message' => 'Product variant not available'], 400);
-                }
                 return redirect()->back()->withErrors(['error' => 'Product variant not available']);
             }
             
@@ -64,9 +70,6 @@ class CartController extends Controller
                 
             if ($existingOrder) {
                 $errorMessage = 'Cannot add to cart. There is already an existing order for beneficiary number ' . $request->beneficiary_number . ' with status: ' . $existingOrder->status . '. Wait for the order to complete.';
-                if ($request->expectsJson()) {
-                    return response()->json(['success' => false, 'message' => $errorMessage], 400);
-                }
                 return redirect()->back()->withErrors(['error' => $errorMessage]);
             }
             
@@ -77,9 +80,6 @@ class CartController extends Controller
                 
             if ($existingCartItem) {
                 $errorMessage = 'Cannot add to cart. There is already an item in your cart for beneficiary number ' . $request->beneficiary_number;
-                if ($request->expectsJson()) {
-                    return response()->json(['success' => false, 'message' => $errorMessage], 400);
-                }
                 return redirect()->back()->withErrors(['error' => $errorMessage]);
             }
             
@@ -92,10 +92,6 @@ class CartController extends Controller
                 'network' => $request->network,
                 'price' => $variant->price
             ]);
-            
-            if ($request->expectsJson()) {
-                return response()->json(['success' => true, 'message' => 'Added to cart']);
-            }
             
             return redirect()->back()->with('success', 'Product added to cart!');
         }
@@ -114,7 +110,7 @@ class CartController extends Controller
             ->first();
             
         if (!$variant) {
-            return response()->json(['success' => false, 'message' => 'Product variant not available'], 400);
+            return redirect()->back()->withErrors(['error' => 'Product variant not available']);
         }
         
         // Check for existing orders with same beneficiary number and pending/processing status
@@ -124,9 +120,6 @@ class CartController extends Controller
             
         if ($existingOrder) {
             $errorMessage = 'Cannot add to cart. There is already an existing order for beneficiary number ' . $request->beneficiary_number . ' with status: ' . $existingOrder->status . '. Wait for the order to complete.';
-            if ($request->expectsJson()) {
-                return response()->json(['success' => false, 'message' => $errorMessage], 400);
-            }
             return redirect()->back()->withErrors(['error' => $errorMessage]);
         }
         
@@ -137,9 +130,6 @@ class CartController extends Controller
             
         if ($existingCartItem) {
             $errorMessage = 'Cannot add to cart. There is already an item in your cart for beneficiary number ' . $request->beneficiary_number;
-            if ($request->expectsJson()) {
-                return response()->json(['success' => false, 'message' => $errorMessage], 400);
-            }
             return redirect()->back()->withErrors(['error' => $errorMessage]);
         }
         
@@ -151,10 +141,6 @@ class CartController extends Controller
             'beneficiary_number' => $request->beneficiary_number,
         ]);
 
-        if ($request->expectsJson()) {
-            return response()->json(['success' => true, 'message' => 'Added to cart']);
-        }
-        
         return redirect()->back()->with('success', 'Product added to cart!');
     }
 
@@ -215,7 +201,7 @@ class CartController extends Controller
             
             if (empty($csvData)) {
                 Log::error('Excel file is empty or has no data');
-                return response()->json(['success' => false, 'message' => 'Excel file is empty']);
+                return redirect()->back()->withErrors(['error' => 'Excel file is empty']);
             }
             
             $data = [$csvData]; // Wrap in array to match Excel format
@@ -225,13 +211,21 @@ class CartController extends Controller
             // Determine product type based on user role
             $productType = $user->isCustomer() ? 'customer_product' : 'agent_product';
             
-            // Find the product by network and product type
-            $product = Product::where('network', $request->network)
-                ->where('product_type', $productType)
-                ->first();
+            // Handle MTN EXPRESS as special case - search by name
+            $networkValue = $request->network;
+            if (strtoupper($networkValue) === 'MTN EXPRESS') {
+                $product = Product::where('name', 'MTN Express')
+                    ->where('product_type', $productType)
+                    ->first();
+            } else {
+                // For other networks, search by network field
+                $product = Product::where('network', $networkValue)
+                    ->where('product_type', $productType)
+                    ->first();
+            }
             
             if (!$product) {
-                return response()->json(['success' => false, 'message' => 'Product not found'], 400);
+                return redirect()->back()->withErrors(['error' => 'Product not found']);
             }
             $addedCount = 0;
             $phoneNumbers = [];
@@ -339,14 +333,11 @@ class CartController extends Controller
                 $message .= ". Unavailable variants: " . implode(', ', $unavailableVariants);
             }
             
-            return response()->json([
-                'success' => true, 
-                'message' => $message
-            ]);
+            return redirect()->back()->with('success', $message);
             
         } catch (\Exception $e) {
             Log::error('Excel processing error: ' . $e->getMessage() . ' | File: ' . $e->getFile() . ' | Line: ' . $e->getLine());
-            return response()->json(['success' => false, 'message' => 'Error processing Excel file: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Error processing Excel file: ' . $e->getMessage()]);
         }
     }
     
@@ -367,16 +358,24 @@ class CartController extends Controller
             $productType = $user->isCustomer() ? 'customer_product' : 'agent_product';
             Log::info('Product type determined', ['product_type' => $productType]);
             
-            // Find the product by network and product type
-            $product = Product::where('network', $request->network)
-                ->where('product_type', $productType)
-                ->first();
+            // Handle MTN EXPRESS as special case - search by name
+            $networkValue = $request->network;
+            if (strtoupper($networkValue) === 'MTN EXPRESS') {
+                $product = Product::where('name', 'MTN Express')
+                    ->where('product_type', $productType)
+                    ->first();
+            } else {
+                // For other networks, search by network field
+                $product = Product::where('network', $networkValue)
+                    ->where('product_type', $productType)
+                    ->first();
+            }
             
             Log::info('Product search result', ['product_found' => $product ? true : false, 'network' => $request->network, 'product_type' => $productType]);
             
             if (!$product) {
                 Log::error('Product not found', ['network' => $request->network, 'product_type' => $productType]);
-                return response()->json(['success' => false, 'message' => 'Product not found'], 400);
+                return redirect()->back()->withErrors(['error' => 'Product not found']);
             }
             
             $lines = explode("\n", trim($request->numbers));
@@ -479,14 +478,11 @@ class CartController extends Controller
                 $message .= ". Unavailable variants: " . implode(', ', $unavailableVariants);
             }
             
-            return response()->json([
-                'success' => true, 
-                'message' => $message
-            ]);
+            return redirect()->back()->with('success', $message);
             
         } catch (\Exception $e) {
             Log::error('Bulk processing error: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Error processing bulk numbers']);
+            return redirect()->back()->withErrors(['error' => 'Error processing bulk numbers']);
         }
     }
 }

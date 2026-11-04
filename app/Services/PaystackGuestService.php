@@ -229,10 +229,17 @@ class PaystackGuestService
         }
     }
 
+    /**
+     * Push a guest/shop order to all enabled external order-pusher APIs.
+     *
+     * Each pusher is independent: a failure (or disabled setting) in one
+     * must not prevent the other from running, so each has its own
+     * try/catch and its own status column on the order.
+     */
     private function pushOrderToExternalApis(Order $order)
     {
+        // Unified order pusher
         try {
-            // Check if unified order pusher is enabled
             if (Setting::get('order_pusher_enabled', false)) {
                 $unifiedOrderPusher = new UnifiedOrderPusherService();
                 $unifiedOrderPusher->pushOrderToApi($order);
@@ -244,6 +251,22 @@ class PaystackGuestService
         } catch (\Exception $e) {
             $order->update(['order_pusher_status' => 'failed']);
             \Log::error('Failed to push order to external API', ['orderId' => $order->id, 'network' => $order->network, 'error' => $e->getMessage()]);
+        }
+
+        // Billben order pusher
+        try {
+            if (Setting::get('billben_order_pusher_enabled', false)) {
+                $billbenPusher = new BillbenOrderPusherService();
+                $billbenPusher->pushOrderToApi($order);
+                $order->refresh();
+                \Log::info('Order processed for Billben API', ['orderId' => $order->id, 'network' => $order->network, 'status' => $order->billben_pusher_status]);
+            } else {
+                $order->update(['billben_pusher_status' => 'disabled']);
+                \Log::info('Billben order pusher is disabled', ['orderId' => $order->id]);
+            }
+        } catch (\Exception $e) {
+            $order->update(['billben_pusher_status' => 'failed']);
+            \Log::error('Failed to push order to Billben API', ['orderId' => $order->id, 'network' => $order->network, 'error' => $e->getMessage()]);
         }
     }
 }

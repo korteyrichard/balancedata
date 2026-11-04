@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Support\Facades\DB;
 use App\Services\UnifiedOrderPusherService;
+use App\Services\BillbenOrderPusherService;
 use Illuminate\Support\Facades\Log;
 use App\Models\Setting;
 
@@ -136,7 +137,7 @@ class OrderController extends Controller
             return response()->json(['error' => $e->getMessage()], 400);
         }
         
-        // Push order to external API
+        // Push order to external APIs
         try {
             if (Setting::get('order_pusher_enabled', false)) {
                 $orderPusher = new UnifiedOrderPusherService();
@@ -146,7 +147,21 @@ class OrderController extends Controller
                 Log::info('Order pusher is disabled', ['orderId' => $order->id]);
             }
         } catch (\Exception $e) {
-            Log::error('Failed to push order to external API', ['orderId' => $order->id, 'network' => $order->network, 'error' => $e->getMessage()]);
+            Log::error('Failed to push order to Unified API', ['orderId' => $order->id, 'network' => $order->network, 'error' => $e->getMessage()]);
+        }
+
+        try {
+            if (Setting::get('billben_order_pusher_enabled', false)) {
+                $billbenPusher = new BillbenOrderPusherService();
+                $billbenPusher->pushOrderToApi($order);
+                $order->refresh();
+            } else {
+                $order->update(['billben_pusher_status' => 'disabled']);
+                Log::info('Billben order pusher is disabled', ['orderId' => $order->id]);
+            }
+        } catch (\Exception $e) {
+            $order->update(['billben_pusher_status' => 'failed']);
+            Log::error('Failed to push order to Billben API', ['orderId' => $order->id, 'network' => $order->network, 'error' => $e->getMessage()]);
         }
 
         // Load the order with its products and user for the response

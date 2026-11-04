@@ -24,6 +24,7 @@ interface Order {
   beneficiary_number?: string;
   payment_reference?: string;
   order_pusher_status: 'disabled' | 'success' | 'failed' | null | undefined;
+  billben_pusher_status: 'disabled' | 'success' | 'failed' | null | undefined;
   order_source?: 'shop' | 'dashboard' | 'api';
   commissions?: Array<{
     id: number;
@@ -481,8 +482,8 @@ export default function AdminOrders() {
                             <option value="cancelled">Cancelled</option>
                         </select>
                       </td>
-                      <td className={`px-3 sm:px-5 py-3 sm:py-4 rounded ${getOrderPusherStatusColor(order.order_pusher_status || 'disabled')} font-medium text-xs`}>
-                        {order.order_pusher_status ? order.order_pusher_status.charAt(0).toUpperCase() + order.order_pusher_status.slice(1) : 'Disabled'}
+                      <td className={`px-3 sm:px-5 py-3 sm:py-4 rounded ${getOrderPusherStatusColor(order.billben_pusher_status || 'disabled')} font-medium text-xs`}>
+                        {order.billben_pusher_status ? order.billben_pusher_status.charAt(0).toUpperCase() + order.billben_pusher_status.slice(1) : 'Disabled'}
                       </td>
                       <td className="px-3 sm:px-5 py-3 sm:py-4 font-semibold">GHS {order.total}</td>
                       <td className="px-3 sm:px-5 py-3 sm:py-4 text-right space-x-2 sm:space-x-3">
@@ -506,7 +507,7 @@ export default function AdminOrders() {
                         <td colSpan={9} className="px-3 sm:px-6 py-4 sm:py-5">
                           <div className="space-y-2 text-xs sm:text-sm">
                             <p><strong>Status:</strong> {order.status}</p>
-                            <p><strong>API Status:</strong> <span className={`px-2 py-1 rounded text-xs ${getOrderPusherStatusColor(order.order_pusher_status || 'disabled')}`}>{order.order_pusher_status ? order.order_pusher_status.charAt(0).toUpperCase() + order.order_pusher_status.slice(1) : 'Disabled'}</span></p>
+                            <p><strong>Billben API Status:</strong> <span className={`px-2 py-1 rounded text-xs ${getOrderPusherStatusColor(order.billben_pusher_status || 'disabled')}`}>{order.billben_pusher_status ? order.billben_pusher_status.charAt(0).toUpperCase() + order.billben_pusher_status.slice(1) : 'Disabled'}</span></p>
                             {order.payment_reference && (
                               <p><strong>Payment Reference:</strong> {order.payment_reference}</p>
                             )}

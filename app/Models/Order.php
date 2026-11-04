@@ -21,6 +21,8 @@ class Order extends Model
         'buyer_email',
         'is_guest_order',
         'order_pusher_status',
+        'billben_reference_id',
+        'billben_pusher_status',
         'order_source'
     ];
     

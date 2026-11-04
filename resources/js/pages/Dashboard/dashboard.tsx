@@ -106,10 +106,11 @@ export default function Dashboard({ auth }: DashboardProps) {
   }) || [];
 
   const networks = [
-    { id: 'MTN', name: 'MTN', icon: '/mtnlogo.jpeg', color: 'bg-yellow-500' },
-    { id: 'TELECEL', name: 'Telecel', icon: '/telecellogo.png', color: 'bg-red-500' },
-    { id: 'ISHARE', name: 'Ishare', icon: '/atlogo.png', color: 'bg-blue-500' },
-    { id: 'BIGTIME', name: 'Bigtime', icon: '/atlogo.png', color: 'bg-purple-500' }
+    { id: 'MTN', name: 'MTN', icon: '/mtnlogo.jpeg', color: 'bg-yellow-500', productName: 'MTN' },
+    { id: 'TELECEL', name: 'Telecel', icon: '/telecellogo.png', color: 'bg-red-500', productName: 'Telecel' },
+    { id: 'ISHARE', name: 'Ishare', icon: '/atlogo.png', color: 'bg-blue-500', productName: 'Ishare' },
+    { id: 'BIGTIME', name: 'Bigtime', icon: '/atlogo.png', color: 'bg-purple-500', productName: 'Bigtime' },
+    { id: 'MTN EXPRESS', name: 'MTN Express', icon: '/mtnlogo.jpeg', color: 'bg-yellow-600', productName: 'MTN Express' }
   ];
 
   const getNetworkButtonColors = (networkId: string) => {
@@ -118,14 +119,17 @@ export default function Dashboard({ auth }: DashboardProps) {
       case 'TELECEL': return 'bg-red-500 hover:bg-red-600';
       case 'ISHARE': return 'bg-blue-500 hover:bg-blue-600';
       case 'BIGTIME': return 'bg-purple-500 hover:bg-purple-600';
+      case 'MTN EXPRESS': return 'bg-yellow-600 hover:bg-yellow-700';
       default: return 'bg-gray-500 hover:bg-gray-600';
     }
   };
 
-  const fetchBundleSizes = async (network: string) => {
+  const fetchBundleSizes = async (networkId: string) => {
     setLoadingSizes(true);
     try {
-      const response = await fetch(`/api/bundle-sizes?network=${network}`);
+      const selectedNetworkObj = networks.find(n => n.id === networkId);
+      const productName = selectedNetworkObj?.productName || networkId;
+      const response = await fetch(`/api/bundle-sizes?network=${encodeURIComponent(productName)}`);
       const data = await response.json();
       if (data.success) {
         setAvailableSizes(data.sizes);
@@ -244,8 +248,11 @@ export default function Dashboard({ auth }: DashboardProps) {
       return;
     }
     
+    const selectedNetworkObj = networks.find(n => n.id === selectedNetwork);
+    const productName = selectedNetworkObj?.productName || selectedNetwork;
+    
     router.post(route('add.to.cart'), {
-      network: selectedNetwork,
+      network: productName,
       quantity: bundleSize,
       beneficiary_number: phoneNumber,
     }, {

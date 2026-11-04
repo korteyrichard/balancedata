@@ -258,10 +258,10 @@ class DashboardController extends Controller
 
     public function getBundleSizes(Request $request)
     {
-        $network = $request->get('network');
+        $productName = $request->get('network');
         
-        if (!$network) {
-            return response()->json(['success' => false, 'message' => 'Network is required']);
+        if (!$productName) {
+            return response()->json(['success' => false, 'message' => 'Product name is required']);
         }
         
         $user = auth()->user();
@@ -275,7 +275,7 @@ class DashboardController extends Controller
             $productType = 'agent_product';
         }
         
-        $product = Product::where('network', $network)
+        $product = Product::where('name', $productName)
             ->where('product_type', $productType)
             ->first();
         

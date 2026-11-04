@@ -31,3 +31,6 @@ Schedule::command('orders:sync-codecraft-mtn-status')->everyTenMinutes();
 
 // Check failed orders and sync with external APIs
 Schedule::command('orders:sync-failed')->hourly();
+
+// Sync Billben order statuses
+Schedule::command('billben:sync-orders')->everyTenMinutes();
