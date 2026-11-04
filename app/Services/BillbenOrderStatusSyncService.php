@@ -8,13 +8,13 @@ use Illuminate\Support\Facades\Log;
 
 class BillbenOrderStatusSyncService
 {
-    private $baseUrl = 'https://billdenprimehub.com/api/v1';
+    private $baseUrl = 'https://billbenprimehub.com/api/v1';
     private $apiKey = '';
 
     public function __construct()
     {
         $this->apiKey = config('services.billben.api_key', '');
-        $this->baseUrl = config('services.billben.base_url', $this->baseUrl);
+        $this->baseUrl = rtrim(config('services.billben.base_url', $this->baseUrl), '/');
     }
 
     public function syncOrderStatus(Order $order): ?array

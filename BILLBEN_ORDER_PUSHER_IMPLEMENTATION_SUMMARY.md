@@ -49,7 +49,7 @@ A complete Billben Order Pusher integration that automatically pushes orders to 
 - **Changes:**
   ```php
   'billben' => [
-      'base_url' => env('BILLBEN_BASE_URL', 'https://billdenprimehub.com/api/v1'),
+      'base_url' => env('BILLBEN_BASE_URL', 'https://billbenprimehub.com/api/v1'),
       'api_key' => env('BILLBEN_API_KEY'),
   ],
   ```
@@ -58,7 +58,7 @@ A complete Billben Order Pusher integration that automatically pushes orders to 
 - **File:** `.env`
 - **Changes:**
   ```env
-  BILLBEN_BASE_URL=https://billdenprimehub.com/api/v1
+  BILLBEN_BASE_URL=https://billbenprimehub.com/api/v1
   BILLBEN_API_KEY=<billben_api_key_here>
   ```
 
@@ -134,10 +134,10 @@ Currently commented out, but same pattern can be applied when enabled.
 
 ## Supported Networks
 
-- **MTN** - Package IDs 1-14
-- **AirtelTigo iShare** - Package IDs 15-24
-- **AirtelTigo BigTime** - Package IDs 25-29
-- **Telecel** - Package IDs 30-37
+- **MTN** - Package IDs 1-16
+- **Telecel** - Package IDs 17-24
+- **AirtelTigo BigTime** - Package IDs 25-35
+- **AirtelTigo iShare** - Package IDs 36-43
 
 ## Supported Data Sizes
 
@@ -181,7 +181,7 @@ UPDATE settings SET value = 'true' WHERE key = 'billben_order_pusher_enabled';
 ```
 
 ### 4. Update Package ID Mappings
-Get actual package IDs from Billben API and update `getPackageIdByNetworkAndSize()` method in BillbenOrderPusherService.
+If Billben changes its catalog, verify the package IDs against the Billben API and update `getPackageIdByNetworkAndSize()` and its regression tests.
 
 ### 5. Test
 Create an order and verify:

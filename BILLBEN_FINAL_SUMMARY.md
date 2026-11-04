@@ -186,10 +186,10 @@ A **complete, production-ready Billben Order Pusher** integrated into all order 
 
 | Network | Code | Package IDs |
 |---------|------|------------|
-| MTN | `mtn` | 1-14 |
-| AirtelTigo iShare | `airteltigo_ishare` | 15-24 |
-| AirtelTigo BigTime | `airteltigo_bigtime` | 25-29 |
-| Telecel | `telecel` | 30-37 |
+| MTN | `mtn` | 1-16 |
+| Telecel | `telecel` | 17-24 |
+| AirtelTigo BigTime | `airteltigo_bigtime` | 25-35 |
+| AirtelTigo iShare | `airteltigo_ishare` | 36-43 |
 
 ---
 

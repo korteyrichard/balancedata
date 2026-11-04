@@ -48,7 +48,7 @@ Add these to your `.env` file:
 
 ```env
 # Billben Order Pusher API credentials
-BILLBEN_BASE_URL=https://billdenprimehub.com/api/v1
+BILLBEN_BASE_URL=https://billbenprimehub.com/api/v1
 BILLBEN_API_KEY=<your_billben_api_key>
 ```
 
@@ -58,7 +58,7 @@ The configuration is automatically loaded from `config/services.php`:
 
 ```php
 'billben' => [
-    'base_url' => env('BILLBEN_BASE_URL', 'https://billdenprimehub.com/api/v1'),
+    'base_url' => env('BILLBEN_BASE_URL', 'https://billbenprimehub.com/api/v1'),
     'api_key' => env('BILLBEN_API_KEY'),
 ],
 ```
@@ -78,14 +78,17 @@ This adds:
 ## Supported Networks
 
 The service supports the following networks:
-- **MTN** - Package IDs 1-14
-- **AirtelTigo iShare** - Package IDs 15-24
-- **AirtelTigo BigTime** - Package IDs 25-29
-- **Telecel** - Package IDs 30-37
+- **MTN** - Package IDs 1-16
+- **Telecel** - Package IDs 17-24
+- **AirtelTigo BigTime** - Package IDs 25-35
+- **AirtelTigo iShare** - Package IDs 36-43
 
-## Supported Data Sizes
+## Supported Data Sizes by Network
 
-- 1GB, 2GB, 3GB, 4GB, 5GB, 6GB, 8GB, 10GB, 15GB, 20GB, 25GB, 30GB, 40GB, 50GB
+- MTN: 1GB, 2GB, 3GB, 4GB, 5GB, 6GB, 7GB, 8GB, 10GB, 15GB, 20GB, 25GB, 30GB, 40GB, 50GB, 100GB
+- Telecel: 5GB, 10GB, 15GB, 20GB, 25GB, 30GB, 40GB, 50GB
+- AirtelTigo BigTime: 10GB, 15GB, 20GB, 25GB, 30GB, 40GB, 50GB, 60GB, 80GB, 100GB, 200GB
+- AirtelTigo iShare: 1GB, 2GB, 3GB, 4GB, 5GB, 6GB, 7GB, 8GB
 
 ## Usage
 
@@ -173,16 +176,16 @@ The Billben Order Pusher works alongside the existing Unified Order Pusher:
 
 ## Package ID Mapping
 
-The current implementation uses placeholder package IDs. To use actual Billben package IDs:
+The implementation uses the package IDs from the Billben package table. If Billben changes its catalog:
 
-1. Get the list of available packages from Billben API:
+1. Verify the available packages with the Billben API:
    ```
-   GET /v1/data-packages/?network=mtn
+   GET /data-packages/?network=mtn
    ```
 
-2. Update the mapping in `getPackageIdByNetworkAndSize()` method with actual package IDs
+2. Update the mapping in `getPackageIdByNetworkAndSize()` and its regression tests.
 
-3. Consider caching the package list for performance
+3. Keep the network and size-to-ID mapping aligned with the API response.
 
 ## Future Enhancements
 
@@ -226,4 +229,4 @@ GET /v1/orders/<order_id>/
 Headers: X-API-Key: <api_key>
 ```
 
-For complete API documentation, see: https://billdenprimehub.com/api/v1/
+For complete API documentation, see: https://billbenprimehub.com/api/v1/

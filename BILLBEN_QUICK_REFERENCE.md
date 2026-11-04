@@ -74,14 +74,17 @@ Setting::get('billben_order_pusher_enabled', false);
 
 | Network | Code | Package IDs |
 |---|---|---|
-| MTN | mtn | 1-14 |
-| AirtelTigo iShare | airteltigo_ishare | 15-24 |
-| AirtelTigo BigTime | airteltigo_bigtime | 25-29 |
-| Telecel | telecel | 30-37 |
+| MTN | mtn | 1-16 |
+| Telecel | telecel | 17-24 |
+| AirtelTigo BigTime | airteltigo_bigtime | 25-35 |
+| AirtelTigo iShare | airteltigo_ishare | 36-43 |
 
-## Supported Data Sizes
+## Supported Data Sizes by Network
 
-1GB, 2GB, 3GB, 4GB, 5GB, 6GB, 8GB, 10GB, 15GB, 20GB, 25GB, 30GB, 40GB, 50GB
+- MTN: 1GB, 2GB, 3GB, 4GB, 5GB, 6GB, 7GB, 8GB, 10GB, 15GB, 20GB, 25GB, 30GB, 40GB, 50GB, 100GB
+- Telecel: 5GB, 10GB, 15GB, 20GB, 25GB, 30GB, 40GB, 50GB
+- AirtelTigo BigTime: 10GB, 15GB, 20GB, 25GB, 30GB, 40GB, 50GB, 60GB, 80GB, 100GB, 200GB
+- AirtelTigo iShare: 1GB, 2GB, 3GB, 4GB, 5GB, 6GB, 7GB, 8GB
 
 ## Order Fields
 
@@ -168,7 +171,7 @@ GET /v1/wallet/balance/
 ## Environment Variables
 
 ```env
-BILLBEN_BASE_URL=https://billdenprimehub.com/api/v1
+BILLBEN_BASE_URL=https://billbenprimehub.com/api/v1
 BILLBEN_API_KEY=your_api_key_here
 ```
 

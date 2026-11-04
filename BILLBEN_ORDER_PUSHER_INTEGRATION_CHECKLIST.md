@@ -34,14 +34,14 @@
 - [x] **config/services.php** - Added Billben configuration
   ```php
   'billben' => [
-      'base_url' => env('BILLBEN_BASE_URL', 'https://billdenprimehub.com/api/v1'),
+      'base_url' => env('BILLBEN_BASE_URL', 'https://billbenprimehub.com/api/v1'),
       'api_key' => env('BILLBEN_API_KEY'),
   ],
   ```
 
 - [x] **.env** - Added environment variables
   ```env
-  BILLBEN_BASE_URL=https://billdenprimehub.com/api/v1
+  BILLBEN_BASE_URL=https://billbenprimehub.com/api/v1
   BILLBEN_API_KEY=<billben_api_key_here>
   ```
 
@@ -125,10 +125,10 @@
 
 ## ✅ Supported Networks
 
-- [x] MTN (Package IDs 1-14)
-- [x] AirtelTigo iShare (Package IDs 15-24)
-- [x] AirtelTigo BigTime (Package IDs 25-29)
-- [x] Telecel (Package IDs 30-37)
+- [x] MTN (Package IDs 1-16)
+- [x] Telecel (Package IDs 17-24)
+- [x] AirtelTigo BigTime (Package IDs 25-35)
+- [x] AirtelTigo iShare (Package IDs 36-43)
 
 ## ✅ Supported Data Sizes
 
@@ -170,7 +170,7 @@
 ### Immediate (Required)
 - [ ] Run migrations: `php artisan migrate`
 - [ ] Add Billben API key to `.env`
-- [ ] Update package ID mappings with actual Billben IDs
+- [x] Update package ID mappings with current Billben IDs
 - [ ] Enable Billben pusher: `Setting::set('billben_order_pusher_enabled', true)`
 - [ ] Test order creation
 
@@ -254,7 +254,7 @@ Status Sync Flow
 - Pushers can be enabled/disabled independently via settings
 - All operations are logged with full context
 - Phone numbers are automatically formatted
-- Package IDs are currently placeholders - update with actual Billben IDs
+- Package IDs are mapped from the current Billben package table
 
 ## ✨ Key Achievements
 

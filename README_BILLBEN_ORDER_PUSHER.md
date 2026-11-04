@@ -210,10 +210,10 @@ Create an order and verify `billben_reference_id` is populated.
 
 | Network | Code | Package IDs | Status |
 |---------|------|------------|--------|
-| MTN | `mtn` | 1-14 | ✅ |
-| AirtelTigo iShare | `airteltigo_ishare` | 15-24 | ✅ |
-| AirtelTigo BigTime | `airteltigo_bigtime` | 25-29 | ✅ |
-| Telecel | `telecel` | 30-37 | ✅ |
+| MTN | `mtn` | 1-16 | ✅ |
+| Telecel | `telecel` | 17-24 | ✅ |
+| AirtelTigo BigTime | `airteltigo_bigtime` | 25-35 | ✅ |
+| AirtelTigo iShare | `airteltigo_ishare` | 36-43 | ✅ |
 
 ---
 
@@ -242,14 +242,14 @@ billben_order_pusher_enabled = false (default)
 
 ### Environment Variables
 ```env
-BILLBEN_BASE_URL=https://billdenprimehub.com/api/v1
+BILLBEN_BASE_URL=https://billbenprimehub.com/api/v1
 BILLBEN_API_KEY=your_api_key_here
 ```
 
 ### Service Configuration
 ```php
 'billben' => [
-    'base_url' => env('BILLBEN_BASE_URL', 'https://billdenprimehub.com/api/v1'),
+    'base_url' => env('BILLBEN_BASE_URL', 'https://billbenprimehub.com/api/v1'),
     'api_key' => env('BILLBEN_API_KEY'),
 ],
 ```

@@ -32,7 +32,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Share social links with all Inertia responses
         Inertia::share([
-            'socialLinks' => [
+            'socialLinks' => fn () => [
                 'whatsapp_community' => Setting::get('whatsapp_community_link', ''),
                 'whatsapp_contact' => Setting::get('whatsapp_contact_link', ''),
                 'telegram_channel' => Setting::get('telegram_channel_link', ''),

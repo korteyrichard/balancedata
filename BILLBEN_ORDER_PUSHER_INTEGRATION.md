@@ -140,7 +140,7 @@ INSERT INTO settings (key, value) VALUES ('billben_order_pusher_enabled', 'false
 
 Add to `.env`:
 ```env
-BILLBEN_BASE_URL=https://billdenprimehub.com/api/v1
+BILLBEN_BASE_URL=https://billbenprimehub.com/api/v1
 BILLBEN_API_KEY=<your_billben_api_key>
 ```
 
@@ -149,7 +149,7 @@ BILLBEN_API_KEY=<your_billben_api_key>
 Already configured in `config/services.php`:
 ```php
 'billben' => [
-    'base_url' => env('BILLBEN_BASE_URL', 'https://billdenprimehub.com/api/v1'),
+    'base_url' => env('BILLBEN_BASE_URL', 'https://billbenprimehub.com/api/v1'),
     'api_key' => env('BILLBEN_API_KEY'),
 ],
 ```

@@ -97,7 +97,7 @@ return [
     ],
 
     'billben' => [
-        'base_url' => env('BILLBEN_BASE_URL', 'https://billdenprimehub.com/api/v1'),
+        'base_url' => env('BILLBEN_BASE_URL', 'https://billbenprimehub.com/api/v1'),
         'api_key' => env('BILLBEN_API_KEY'),
     ],
 

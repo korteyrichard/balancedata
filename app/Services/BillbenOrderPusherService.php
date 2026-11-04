@@ -9,13 +9,13 @@ use Illuminate\Support\Facades\Log;
 
 class BillbenOrderPusherService
 {
-    private $baseUrl = 'https://billdenprimehub.com/api/v1';
+    private $baseUrl = 'https://billbenprimehub.com/api/v1';
     private $apiKey = '';
 
     public function __construct()
     {
         $this->apiKey = config('services.billben.api_key', '');
-        $this->baseUrl = config('services.billben.base_url', $this->baseUrl);
+        $this->baseUrl = rtrim(config('services.billben.base_url', $this->baseUrl), '/');
     }
 
     public function pushOrderToApi(Order $order): void
@@ -98,7 +98,7 @@ class BillbenOrderPusherService
                 'endpoint' => $this->baseUrl . '/orders/create/',
                 'payload' => $payload,
                 'api_key_set' => !empty($this->apiKey),
-                'base_url_configured' => $this->baseUrl !== 'https://billdenprimehub.com/api/v1',
+                'base_url_configured' => $this->baseUrl !== 'https://billbenprimehub.com/api/v1',
                 'network' => $network,
                 'size' => $size,
                 'package_id' => $packageId
@@ -201,12 +201,14 @@ class BillbenOrderPusherService
 
     private function getPackageIdByNetworkAndSize(string $network, string $size): ?int
     {
-        $normalizedSize = strtolower($size);
-        $normalizedNetwork = strtolower($network);
+        $sizeValue = preg_replace('/\s*gb$/i', '', trim($size));
+        if (!is_numeric($sizeValue)) {
+            return null;
+        }
 
-        // Billben package mappings - these should be fetched from API in production
-        // For now, using placeholder IDs that should be replaced with actual Billben package IDs
-        
+        $normalizedSize = (string) (float) $sizeValue . 'gb';
+        $normalizedNetwork = strtolower(trim($network));
+
         if ($normalizedNetwork === 'mtn') {
             $mtnMapping = [
                 '1gb' => 1,
@@ -215,55 +217,61 @@ class BillbenOrderPusherService
                 '4gb' => 4,
                 '5gb' => 5,
                 '6gb' => 6,
-                '8gb' => 7,
-                '10gb' => 8,
-                '15gb' => 9,
-                '20gb' => 10,
-                '25gb' => 11,
-                '30gb' => 12,
-                '40gb' => 13,
-                '50gb' => 14
+                '7gb' => 7,
+                '8gb' => 8,
+                '10gb' => 9,
+                '15gb' => 10,
+                '20gb' => 11,
+                '25gb' => 12,
+                '30gb' => 13,
+                '40gb' => 14,
+                '50gb' => 15,
+                '100gb' => 16
             ];
             return $mtnMapping[$normalizedSize] ?? null;
         }
 
         if ($normalizedNetwork === 'airteltigo_ishare' || $normalizedNetwork === 'at' || $normalizedNetwork === 'ishare') {
             $atMapping = [
-                '1gb' => 15,
-                '2gb' => 16,
-                '3gb' => 17,
-                '4gb' => 18,
-                '5gb' => 19,
-                '6gb' => 20,
-                '8gb' => 21,
-                '10gb' => 22,
-                '15gb' => 23,
-                '20gb' => 24
+                '1gb' => 36,
+                '2gb' => 37,
+                '3gb' => 38,
+                '4gb' => 39,
+                '5gb' => 40,
+                '6gb' => 41,
+                '7gb' => 42,
+                '8gb' => 43
             ];
             return $atMapping[$normalizedSize] ?? null;
         }
 
         if ($normalizedNetwork === 'airteltigo_bigtime' || $normalizedNetwork === 'bigtime') {
             $atBigMapping = [
-                '20gb' => 25,
-                '25gb' => 26,
-                '30gb' => 27,
-                '40gb' => 28,
-                '50gb' => 29
+                '10gb' => 25,
+                '15gb' => 26,
+                '20gb' => 27,
+                '25gb' => 28,
+                '30gb' => 29,
+                '40gb' => 30,
+                '50gb' => 31,
+                '60gb' => 32,
+                '80gb' => 33,
+                '100gb' => 34,
+                '200gb' => 35
             ];
             return $atBigMapping[$normalizedSize] ?? null;
         }
 
         if ($normalizedNetwork === 'telecel') {
             $telecelMapping = [
-                '5gb' => 30,
-                '10gb' => 31,
-                '15gb' => 32,
-                '20gb' => 33,
-                '25gb' => 34,
-                '30gb' => 35,
-                '40gb' => 36,
-                '50gb' => 37
+                '5gb' => 17,
+                '10gb' => 18,
+                '15gb' => 19,
+                '20gb' => 20,
+                '25gb' => 21,
+                '30gb' => 22,
+                '40gb' => 23,
+                '50gb' => 24
             ];
             return $telecelMapping[$normalizedSize] ?? null;
         }
